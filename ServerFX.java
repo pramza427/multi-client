@@ -51,8 +51,11 @@ public class ServerFX extends Application{
 	TextField serverPortIn;
 	int portNumber = 0;
 	boolean play1, play2, stop;
+	//The server connection for 4 people
 	Server.toClientThread tct = null;
 	Server.toClientThread tct2 = null;
+	Server.toClientThread tct3 = null;
+	Server.toClientThread tct4 = null;
 	private Server conn = null;
 	private final ObservableList<String> clientList = FXCollections.observableArrayList();
 	private int selectedIndex;
@@ -65,14 +68,16 @@ public class ServerFX extends Application{
 	
 	@Override
 	public void stop(){
-		
+		stop = true;
+		tct = null;
+		tct2 = null;
+		tct3 = null;
+		tct4 = null;
 		try {
-			stop = true;
 			conn.server.serverSocket.close();
-			tct = null;
-			tct2 = null;
-		} catch (Exception e) {
 			
+		} catch (Exception e) {
+			System.out.println("serverSocket.close in stop() did not run!");
 		}
 		
 		

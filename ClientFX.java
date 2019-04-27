@@ -9,6 +9,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.function.Consumer;
 
@@ -39,9 +40,9 @@ import javafx.stage.Stage;
 
 public class ClientFX extends Application{
 	
-	Label welcome;
-	Button setIPandPort, quit, rock, paper, scissors, lizard, spock, challenge, acceptChallenge, declineChallenge;
-	TextField challenger;
+	Label welcome, money, sign, pot;
+	Button setIPandPort, quit, hit, pass, bet, enterName, play;
+	TextField betAmount, potAmount, moneyAmount;
 	Stage myStage;
 	Scene nameScene, playScene;
 	private TextArea nameMessages = new TextArea();
@@ -52,6 +53,10 @@ public class ClientFX extends Application{
 	ListView<String> opponentListView = new ListView<String>();
 	private Integer score = 0;
 	Label scoreCounter = new Label(score.toString());
+	
+	Deck deck = new Deck();
+	
+	ArrayList<Card> playerCards = new ArrayList<Card>();
 	
 	private Client conn;
 	
@@ -76,11 +81,34 @@ public class ClientFX extends Application{
 		
 		primaryStage.setTitle("BlackJack!");
 		
-		rock = new Button();
-		paper = new Button();
-		scissors = new Button();
-		lizard = new Button();
-		spock = new Button();
+		deck.shuffle();
+		hit = new Button("Hit");
+		hit.setPrefSize(50, 30);
+		pass = new Button("Pass");
+		pass.setPrefSize(50, 30);
+		bet = new Button("Bet");
+		bet.setPrefSize(50, 30);
+		sign = new Label("$");
+		sign.setFont(Font.font(20));
+		betAmount = new TextField("10");
+		betAmount.setPrefWidth(50);
+		betAmount.setEditable(false);
+		
+		money = new Label("You have:");
+		moneyAmount = new TextField("1000");
+		moneyAmount.setPrefWidth(60);
+		moneyAmount.setEditable(false);
+		
+		pot = new Label("Money in the pot:");
+		potAmount = new TextField("0");
+		potAmount.setMaxWidth(60);
+		potAmount.setEditable(false);
+		
+		playMessages.setPrefWidth(50);
+		playMessages.setMaxWidth(50);
+		playMessages.setMaxSize(300, 200);
+		playMessages.setEditable(false);
+		
 		quit = new Button("Quit");
 		setIPandPort = new Button("Set IP and Port");
 		
@@ -89,8 +117,8 @@ public class ClientFX extends Application{
 		BorderPane playPane = playScreen();
 		BorderPane namePane = nameScreen(primaryStage);
 		
-		nameScene = new Scene(namePane, 400, 400);
-		playScene = new Scene(playPane, 1000, 900);
+		nameScene = new Scene(namePane, 600, 400);
+		playScene = new Scene(playPane, 1000, 1000);
 		
 		primaryStage.setScene(playScene);
 		primaryStage.show();	
@@ -104,8 +132,8 @@ public class ClientFX extends Application{
 		//Second prompt the player to choose a name to display
 		TextField name = new TextField();
 		Label askName = new Label("Please enter the name you want displayed.");
-		Button enterName = new Button("Set Name");
-		Button play = new Button("Play!");
+		enterName = new Button("Set Name");
+		play = new Button("Ready to Play!");
 		//First prompt Player to connect to a server		
 		Label ipPortPrompt = new Label("Please input your IP and Port:");
 		TextField clientIPIn = new TextField("127.0.0.1");
@@ -145,32 +173,55 @@ public class ClientFX extends Application{
 		EventHandler<ActionEvent> clickEnterName = new EventHandler<ActionEvent>(){
 			public void handle(ActionEvent event){
 				System.out.println("Checking if name is available");
+				//Checks if its 3 or more characters
 				if(name.getText().length() < 3) {
 					nameMessages.appendText("Names must be at least 3 letters");
 				}
 				else {
 					try {
+						//sets player name and sends it to the server to add to player list 
+						//and check if the name is already taken
 						playerName = name.getText();
-						playMessages.appendText("You Are: " + playerName + "!!!\n");
-						pStage.setScene(playScene);
 						conn.send("New: " + playerName);
-					
+						play.setDisable(false);
 					} catch (Exception e) {
 						nameMessages.appendText("Could not send name\n");
 					}
 				}
 			}
 		};
+		
+		//What happens when you enter a name
+		EventHandler<ActionEvent> clickPlay = new EventHandler<ActionEvent>(){
+			public void handle(ActionEvent event){
+				try {
+					playMessages.appendText("You Are: " + playerName + "!!!\n");
+					//pStage.setScene(playScene);
+					conn.send("ReadyToPlay: " + playerName);
+				
+				} catch (Exception e) {
+					nameMessages.appendText("Could not send name\n");
+				}
+			}
+		};
 		enterName.setOnAction(clickEnterName);
+		play.setOnAction(clickPlay);
+		play.setDisable(true);
+		
 		HBox nameLine = new HBox(10, name, enterName);
 		VBox nameAll = new VBox(10 , askName, nameLine);
+		Label opLabel = new Label("Connected Players:");
+		VBox opponentBox = new VBox(10, opLabel, opponentListView);
 		
 		//set the middle to prompts and buttons
-		VBox all = new VBox(20, ipPortAll, nameAll);
+		VBox all = new VBox(20, ipPortAll, nameAll, play, nameMessages);
 		tempPane.setCenter(all);
 		
-		//set the bottom to a Text Field to display messages
-		tempPane.setBottom(nameMessages);
+		//set right to Player list
+		tempPane.setRight(opponentBox);
+		opponentListView.setMaxWidth(200);
+		
+
 		enterName.setDisable(true);
 		
 		return tempPane;
@@ -184,24 +235,114 @@ public class ClientFX extends Application{
 		
 		
 		//set a background color of green with a black background
-		Rectangle blackBG = new Rectangle(1000, 900, Color.BLACK);
-		Rectangle greenBG = new Rectangle(980, 880, Color.GREEN);
+		Rectangle blackBG = new Rectangle(1000, 1000, Color.BLACK);
+		Rectangle greenBG = new Rectangle(980, 980, Color.GREEN);
 		greenBG.setArcHeight(50);
 		greenBG.setArcWidth(50);
 		
 		StackPane allBG = new StackPane(blackBG, greenBG);
 		
 		VBox background = new VBox(allBG);
+		pane1.getChildren().add(background);
+		//Finish setting up the background
+		
+		//Items for the center of the pane
+		Label messageLabel = new Label("Messages");
+		VBox potBox = new VBox(10, pot, potAmount, messageLabel, playMessages);
+		potBox.setAlignment(Pos.CENTER);
+		pane1.setCenter(potBox);
+		
+		//Finish Items for the center of the pane
+		
+		//Set player UI
+		playerCards.add(deck.drawCard());
+		playerCards.add(deck.drawCard());
+		
+		HBox cardImages = new HBox(8);
+		for(Card c: playerCards) {
+			cardImages.getChildren().add(c.getPic());
+		}
+		cardImages.setAlignment(Pos.CENTER);
 		
 		
+		HBox moneyBox = new HBox(8, money, moneyAmount);
+		money.setFont(Font.font(30));
+		moneyBox.setAlignment(Pos.CENTER);
+		HBox inputLeft = new HBox(8, hit, pass);
+		HBox inputRight = new HBox(8, bet, sign, betAmount);
+		HBox walkAway = new HBox(quit);
+		walkAway.setAlignment(Pos.CENTER);
+		HBox inputs = new HBox(30, inputLeft, inputRight);
+		inputs.setAlignment(Pos.CENTER);
+		Label you = new Label("You:");
+		you.setFont(Font.font(20));
+		VBox playerUI = new VBox(10, you, cardImages, moneyBox, inputs, walkAway);
+		playerUI.setAlignment(Pos.CENTER);
+		//Finish player UI
 		
-		EventHandler<ActionEvent> clickRock = new EventHandler<ActionEvent>(){
+		//Set opponent UI
+		
+		Image pic = new Image("back.png");
+		ImageView iv = new ImageView(pic);
+		iv.setFitHeight(200);
+		iv.setFitWidth(100);
+		iv.setPreserveRatio(true);
+		
+		ImageView back1 = new ImageView(pic);
+		back1.setFitHeight(200);
+		back1.setFitWidth(100);
+		back1.setPreserveRatio(true);
+		
+		ImageView back2 = new ImageView(pic);
+		back2.setFitHeight(200);
+		back2.setFitWidth(100);
+		back2.setPreserveRatio(true);
+		
+		HBox opponentCards1 = new HBox(10, back1);
+		opponentCards1.setAlignment(Pos.CENTER);
+		
+		pane1.setRight(opponentCards1);
+		
+		HBox opponentCards2 = new HBox(10, back2);
+		opponentCards2.setAlignment(Pos.CENTER);
+		
+		pane1.setLeft(opponentCards2);
+		
+		HBox opponentCards3 = new HBox(10, iv);
+		opponentCards3.setAlignment(Pos.CENTER);
+		
+		pane1.setTop(opponentCards3);
+		
+		EventHandler<ActionEvent> clickHit = new EventHandler<ActionEvent>(){
+			public void handle(ActionEvent event){
+				
+			}
+		};
+		EventHandler<ActionEvent> clickPass = new EventHandler<ActionEvent>(){
+			public void handle(ActionEvent event){
+				
+			}
+		};
+		EventHandler<ActionEvent> clickBet = new EventHandler<ActionEvent>(){
+			public void handle(ActionEvent event){
+				
+			}
+		};
+		EventHandler<ActionEvent> clickQuit = new EventHandler<ActionEvent>(){
 			public void handle(ActionEvent event){
 				
 			}
 		};
 		
-		pane1.getChildren().add(background);
+		hit.setOnAction(clickHit);
+		pass.setOnAction(clickPass);
+		bet.setOnAction(clickBet);
+		quit.setOnAction(clickQuit);
+		
+		
+		
+		pane1.setBottom(playerUI);
+		
 		return pane1;
 	}
 	
@@ -317,9 +458,9 @@ public class ClientFX extends Application{
 							if (n.equals(playerName)){
 								int thirdSpace = data.toString().indexOf(" ", 1);
 								String k = data.toString().substring(0, thirdSpace);
-								challenger.setText(k);
-								acceptChallenge.setDisable(false);
-								declineChallenge.setDisable(false);
+								//challenger.setText(k);
+								//acceptChallenge.setDisable(false);
+								//declineChallenge.setDisable(false);
 							}
 						}
                            //###################################################
@@ -343,7 +484,10 @@ public class ClientFX extends Application{
 					
 				}
 				catch(Exception e) {
-					callback.accept("Connection Closed\n");
+					nameMessages.appendText("Could not connect to server.\nPlease close and try again.\n");
+					playMessages.appendText("Could not connect to server.\nPlease close and try again.\n");
+					enterName.setDisable(true);
+					play.setDisable(true);
 				}
 			}
 		}
