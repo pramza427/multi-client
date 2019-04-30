@@ -57,6 +57,7 @@ public class ClientFX extends Application{
 	Deck deck = new Deck();
 	
 	ArrayList<Card> playerCards = new ArrayList<Card>();
+	ArrayList<String> opponents = new ArrayList<String>();
 	
 	private Client conn;
 	
@@ -92,7 +93,6 @@ public class ClientFX extends Application{
 		sign.setFont(Font.font(20));
 		betAmount = new TextField("10");
 		betAmount.setPrefWidth(50);
-		betAmount.setEditable(false);
 		
 		money = new Label("You have:");
 		moneyAmount = new TextField("1000");
@@ -315,16 +315,46 @@ public class ClientFX extends Application{
 		
 		EventHandler<ActionEvent> clickHit = new EventHandler<ActionEvent>(){
 			public void handle(ActionEvent event){
-				
+				Card c = deck.drawCard();
+				playerCards.add(c);
+				cardImages.getChildren().add(c.getPic());
+				playMessages.appendText("You Hit!\n");
+				int s = 0;
+				for(Card c1 : playerCards) {
+					s += c1.getScore();
+				}
+				if(s > 21) {
+					playMessages.appendText("You bust at " + s + "\n");
+					hit.setDisable(true);
+					pass.setDisable(true);
+					bet.setDisable(true);
+				}
 			}
 		};
 		EventHandler<ActionEvent> clickPass = new EventHandler<ActionEvent>(){
 			public void handle(ActionEvent event){
-				
+				playMessages.appendText("You Passed!\n");
 			}
 		};
 		EventHandler<ActionEvent> clickBet = new EventHandler<ActionEvent>(){
 			public void handle(ActionEvent event){
+				int inBet = Integer.parseInt(betAmount.getText());
+				int currentMoney = Integer.parseInt(moneyAmount.getText());
+				if(inBet <= 0) {
+					playMessages.appendText("You can not bet less than 1\n");
+				}
+				else if(inBet > currentMoney) {
+					playMessages.appendText("You do not have enough money to bet $" + inBet + "\n");
+				}
+				else {
+					int inPot = Integer.parseInt(potAmount.getText());
+					Integer newPot = inPot + inBet;
+					potAmount.setText(newPot.toString());
+					playMessages.appendText("You bet " + inBet + "\n");
+					Integer moneyLeft = currentMoney - inBet;
+					moneyAmount.setText(moneyLeft.toString());
+				}
+				
 				
 			}
 		};
@@ -432,6 +462,32 @@ public class ClientFX extends Application{
 						else if(data.toString().contains("You")) {
 							
 						}
+						//When the server gives you the player list
+						// "Players: name1 name2 name3 name4"
+						else if(data.toString().contains("Players: ")) {
+							int firstSpace = data.toString().indexOf(" ", 1);
+							int secondSpace = data.toString().indexOf(" ", 2);
+							int thirdSpace = data.toString().indexOf(" ", 3);
+							int fourthSpace = data.toString().indexOf(" ", 4);
+							
+							String name1 = data.toString().substring(firstSpace, secondSpace);
+							String name2 = data.toString().substring(secondSpace, thirdSpace);
+							String name3 = data.toString().substring(thirdSpace, fourthSpace);
+							String name4 = data.toString().substring(fourthSpace);
+							
+							opponents.add(name1);
+							opponents.add(name2);
+							opponents.add(name3);
+							opponents.add(name4);
+							opponents.remove(playerName);
+							
+							playMessages.appendText("You are playing against: ");
+							for(String s : opponents) {
+								playMessages.appendText(s + ", ");
+							}
+							playMessages.appendText("\n");
+							
+						}
 						
 						//when the server send "NAME has joined the server!"
 						else if(data.toString().contains("joined the server!")) {
@@ -458,9 +514,7 @@ public class ClientFX extends Application{
 							if (n.equals(playerName)){
 								int thirdSpace = data.toString().indexOf(" ", 1);
 								String k = data.toString().substring(0, thirdSpace);
-								//challenger.setText(k);
-								//acceptChallenge.setDisable(false);
-								//declineChallenge.setDisable(false);
+								
 							}
 						}
                            //###################################################
