@@ -3,7 +3,7 @@
  * pramza2
  * 663328597
  * 
- * CS 342 Project 3
+ * CS 342 Project 5
  */
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -58,9 +58,10 @@ public class ServerFX extends Application{
 	Server.toClientThread tct4 = null;
 	private Server conn = null;
 	private final ObservableList<String> clientList = FXCollections.observableArrayList();
-	private int selectedIndex;
+	
 	ArrayList<Server.toClientThread> clientThreadList= new ArrayList<Server.toClientThread>();
 	
+	ArrayList<Server.toClientThread> ReadyList= new ArrayList<Server.toClientThread>();
 	
 	public static void main(String[] args) throws Exception {
 		launch(args);
@@ -272,17 +273,35 @@ public class ServerFX extends Application{
 			
 		}
 		
-		public void send(Serializable data) throws Exception{
+		public void sendAll(Serializable data) throws Exception{
 			//go through the arrayList of connections and send the data to each
 			for(toClientThread tct: clientThreadList) {
 				tct.out.writeObject(data);
 			}
 		}
+		public void send(Serializable data) throws Exception{
+			//only send to the 4 connected players
+			tct.out.writeObject(data);
+			tct2.out.writeObject(data);
+			tct3.out.writeObject(data);
+			tct4.out.writeObject(data);
+		}
 		
 		public void startGame() {
 			
+			tct = ReadyList.get(0);
+			tct2 = ReadyList.get(1);
+			tct3 = ReadyList.get(2);
+			tct4 = ReadyList.get(3);
 			
+			String s = "Players: " + clientList.get(0) + " " + clientList.get(1) + " "
+					+ clientList.get(2) + " " + clientList.get(3);
 			
+			try {
+				sendAll(s);
+			} catch (Exception e) {
+				messages.appendText("Cound not start game.");
+			}
 		}
 		
 		class ServerThread extends Thread{
@@ -301,9 +320,7 @@ public class ServerFX extends Application{
 						clientThreadList.add(t);
 						t.start();
 						messages.appendText("Client Connected: " + s + "\n");
-						if(clientThreadList.size() == 4) {
-							startGame();
-						}
+						
 					}
 					catch(Exception e) {
 						callback.accept("Connection Closed\n");
@@ -389,23 +406,18 @@ public class ServerFX extends Application{
 							tct2.connection = this.connection;
 						}
 						
-						if(stringData.contains("NewGame:")) {
-							//get the names of the players that want to battle
-							int firstSpace = stringData.indexOf(" ", 1);
-							int secondSpace = stringData.indexOf(" ", firstSpace + 2);
-							String name1 = stringData.substring(firstSpace + 1, secondSpace);
-							String name2 = stringData.substring(secondSpace + 1);
-							//get the index of the 2 players
-							int index1 = clientList.indexOf(name1);
-							int index2 = clientList.indexOf(name2);
-							if(index1 != -1 && index2 != -1) {
-								tct = clientThreadList.get(index1);
-								tct.out.writeObject("You are Player1\n");
-								tct2 = clientThreadList.get(index2);
-								tct2.out.writeObject("You are Player2\n");
-								messages.appendText("Game between " + name1 + " and " + name2 + " has started!\n");
-								tct.out.writeObject("Game between " + name1 + " and " + name2 + " has started!\n");
-								tct2.out.writeObject("Game between " + name1 + " and " + name2 + " has started!\n");
+						if(stringData.contains("ReadyToPlay:")) {
+							String s = stringData.substring(13);
+							messages.appendText(s + "\n");
+							int clientIndex = clientList.indexOf(s);
+							if(clientIndex != -1) {
+								ReadyList.add(clientThreadList.get(clientIndex));
+								if(ReadyList.size() == 4) {
+									startGame();
+								}
+							}
+							else {
+								messages.appendText("clientIndex was wrong");
 							}
 						}
 						
@@ -419,7 +431,7 @@ public class ServerFX extends Application{
 								this.out.writeObject(name + " has joined the server!");
 							}
 							clientList.add(newName);
-							conn.send(newName + " has joined the server!");
+							conn.sendAll(newName + " has joined the server!");
 						}
 						
 					}	
@@ -432,72 +444,6 @@ public class ServerFX extends Application{
 			
 		}
 		
-		
-		
-		/**
-		 * This function takes the strings of the two players choices and prints the winner and returns a string:
-		 * @param a String of player1
-		 * @param b	String of player2
-		 * a and be are in {Rock, Paper, Scissors, Lizard, Spock}
-		 * @return
-		 * possible returns
-		 * 0 for tie
-		 * 1 if player1 won
-		 * 2 if player2 won
-		 */
-		private int getWinner(String a, String b) throws Exception {
-
-			if(a.equals(b)) {
-				return 0;
-			}
-			
-			else if(a.equals("Rock")) {
-				if(b.equals("Lizard") || b.equals("Scissors")) {
-					return 1;
-				}
-				else if(b.equals("Spock") || b.equals("Paper")) {
-					return 2;
-				}
-			}
-			
-			else if(a.equals("Paper")) {
-				if(b.equals("Rock") || b.equals("Spock")) {
-					return 1;
-				}
-				else if(b.equals("Lizard") || b.equals("Scissors")) {
-					return 2;
-				}
-			}
-			
-			else if(a.equals("Scissors")) {
-				if(b.equals("Paper") || b.equals("Lizard")) {
-					return 1;
-				}
-				else if(b.equals("Spock") || b.equals("Rock")) {
-					return 2;
-				}
-			}
-			
-			else if(a.equals("Lizard")) {
-				if(b.equals("Paper") || b.equals("Spock")) {
-					return 1;
-				}
-				else if(b.equals("Scissors") || b.equals("Rock")) {
-					return 2;
-				}
-			}
-			
-			else if(a.equals("Spock")) {
-				if(b.equals("Rock") || b.equals("Scissors")) {
-					return 1;
-				}
-				else if(b.equals("Paper") || b.equals("Lizard")) {
-					return 2;
-				}
-			}
-			
-			return 0;
-		}
 	}
 	
 	

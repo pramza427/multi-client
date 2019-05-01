@@ -1,9 +1,9 @@
 /**
- * Piotr Ramza
+  * Piotr Ramza
  * pramza2
  * 663328597
  * 
- * CS 342 Project 3
+ * CS 342 Project 5
  */
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -120,7 +120,7 @@ public class ClientFX extends Application{
 		nameScene = new Scene(namePane, 600, 400);
 		playScene = new Scene(playPane, 1000, 1000);
 		
-		primaryStage.setScene(playScene);
+		primaryStage.setScene(nameScene);
 		primaryStage.show();	
 		
 	}
@@ -196,7 +196,7 @@ public class ClientFX extends Application{
 			public void handle(ActionEvent event){
 				try {
 					playMessages.appendText("You Are: " + playerName + "!!!\n");
-					//pStage.setScene(playScene);
+					pStage.setScene(playScene);
 					conn.send("ReadyToPlay: " + playerName);
 				
 				} catch (Exception e) {
@@ -486,6 +486,7 @@ public class ClientFX extends Application{
 								playMessages.appendText(s + ", ");
 							}
 							playMessages.appendText("\n");
+							nameMessages.appendText(data.toString());
 							
 						}
 						
