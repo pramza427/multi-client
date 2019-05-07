@@ -3,7 +3,7 @@
  * pramza2
  * 663328597
  * 
- * CS 342 Project 3
+ * CS 342 Project 5
  */
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -58,9 +58,12 @@ public class ServerFX extends Application{
 	Server.toClientThread tct4 = null;
 	private Server conn = null;
 	private final ObservableList<String> clientList = FXCollections.observableArrayList();
-	private int selectedIndex;
+	
 	ArrayList<Server.toClientThread> clientThreadList= new ArrayList<Server.toClientThread>();
 	
+	ArrayList<Server.toClientThread> ReadyList= new ArrayList<Server.toClientThread>();
+	
+	Deck deck = new Deck();
 	
 	public static void main(String[] args) throws Exception {
 		launch(args);
@@ -94,7 +97,8 @@ public class ServerFX extends Application{
 		//set round (which has a max of 2) to 1
 		round = 1;
 		stop = false;
-
+		
+		deck.shuffle();
 		
 		primaryStage.setTitle("Server for Rock Paper Scissors Lizard Spock!");
 		
@@ -272,18 +276,55 @@ public class ServerFX extends Application{
 			
 		}
 		
-		public void send(Serializable data) throws Exception{
+		public void sendAll(Serializable data) throws Exception{
 			//go through the arrayList of connections and send the data to each
 			for(toClientThread tct: clientThreadList) {
 				tct.out.writeObject(data);
 			}
 		}
+		public void send(Serializable data) throws Exception{
+			//only send to the 4 connected players
+			tct.out.writeObject(data);
+			tct2.out.writeObject(data);
+			tct3.out.writeObject(data);
+			tct4.out.writeObject(data);
+		}
 		
-		public void startGame() {
+		public void startGame() throws Exception {
 			
 			
+			tct = ReadyList.get(0);
+			tct2 = ReadyList.get(1);
+			tct3 = ReadyList.get(2);
+			tct4 = ReadyList.get(3);
+			
+			String s = "Players: " + clientList.get(0) + " " + clientList.get(1) + " "
+					+ clientList.get(2) + " " + clientList.get(3);		
+			try {
+				sendAll(s);
+			} catch (Exception e) {
+				messages.appendText("Cound not start game.");
+			}
+		}
+		
+		
+		public void dealInitialCards(String n){
+			
+			Card c1 = deck.drawCard();
+			Card c2 = deck.drawCard();
+			
+			String s = "Dealing: " + n + " " + c1.getSuit() + " " + c1.getNumber() + " " + c2.getSuit() + " " + c2.getNumber();
+			
+			try {
+				sendAll(s);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				messages.appendText("Cound deal two cards.");
+			}
 			
 		}
+	
+		
 		
 		class ServerThread extends Thread{
 			ServerSocket serverSocket = null;
@@ -301,9 +342,7 @@ public class ServerFX extends Application{
 						clientThreadList.add(t);
 						t.start();
 						messages.appendText("Client Connected: " + s + "\n");
-						if(clientThreadList.size() == 4) {
-							startGame();
-						}
+						
 					}
 					catch(Exception e) {
 						callback.accept("Connection Closed\n");
@@ -353,59 +392,45 @@ public class ServerFX extends Application{
 							conn.send(n +" Has Disconnected!");
 							break;
 						}
-						//When a user challenges someone else
-						if(stringData.contains("challenged")) {
-							int thirdSpace = stringData.indexOf(" ", 1);
-							int tSpace = stringData.indexOf("by");
-							String t = stringData.substring(0, thirdSpace);
-							String x = stringData.substring(tSpace+3);
-                            conn.send (x + " has challenged " + t);
-						}
-                        //If a user declines a challenge
-						if(stringData.contains("declined")) {
-							int thirdSpace = stringData.indexOf(" ", 1);
-							int tSpace = stringData.indexOf("declined");
-							String t = stringData.substring(0, thirdSpace);
-							String x = stringData.substring(tSpace+9);
-							conn.send (t + " has declined the challenge from " + x);
-						}
-                        //If a user accepts a challenge
-						if(stringData.contains("accepted")) {
-							int thirdSpace = stringData.indexOf(" ", 1);
-							int tSpace = stringData.indexOf("accepted");
-							String t = stringData.substring(0, thirdSpace);
-							String x = stringData.substring(tSpace+9);
-							conn.send (t + " has accepted the challenge from " + x);
-							tct.connection = this.connection;
-						}
-                         ///###################################################################
-                        //DOES NOT WORK, NEEDS MODIFICATION
-						if(stringData.contains("ready")) {
-							int thirdSpace = stringData.indexOf(" ", 1);
-							String t = stringData.substring(0, thirdSpace);
-							int tSpace = stringData.indexOf("for");
-							String x = stringData.substring(tSpace+4);
-							conn.send(x + " is player 1.");
-							tct2.connection = this.connection;
+						
+						///////////////////////////////////////////////////////////////////////
+						if(stringData.contains("hit")) {
+							Card c = deck.drawCard();
+							
+							int firstSpace = stringData.indexOf(" ", 1);
+							
+							String n = stringData.substring(0, firstSpace);
+							messages.appendText(n + " chose to hit! They drew: " + c.getSuit() + c.getNumber() + "\n");
+							
+							conn.sendAll(n + " has drawn " + c.getSuit() + " of "  + c.getNumber());
+							//playerName has drawn S of N 
 						}
 						
-						if(stringData.contains("NewGame:")) {
-							//get the names of the players that want to battle
+						if(stringData.contains("drew their first two cards")) {
+							
 							int firstSpace = stringData.indexOf(" ", 1);
-							int secondSpace = stringData.indexOf(" ", firstSpace + 2);
-							String name1 = stringData.substring(firstSpace + 1, secondSpace);
-							String name2 = stringData.substring(secondSpace + 1);
-							//get the index of the 2 players
-							int index1 = clientList.indexOf(name1);
-							int index2 = clientList.indexOf(name2);
-							if(index1 != -1 && index2 != -1) {
-								tct = clientThreadList.get(index1);
-								tct.out.writeObject("You are Player1\n");
-								tct2 = clientThreadList.get(index2);
-								tct2.out.writeObject("You are Player2\n");
-								messages.appendText("Game between " + name1 + " and " + name2 + " has started!\n");
-								tct.out.writeObject("Game between " + name1 + " and " + name2 + " has started!\n");
-								tct2.out.writeObject("Game between " + name1 + " and " + name2 + " has started!\n");
+							String n = stringData.substring(0, firstSpace);
+							dealInitialCards(n);
+							
+						}
+						
+						if(stringData.contains("playing against")) {
+						}
+						//////////////////////////////////////////////////////////////////////
+						
+						if(stringData.contains("ReadyToPlay:")) {
+							boolean startedGame = false;
+							String s = stringData.substring(13);
+							messages.appendText(s + "\n");
+							int clientIndex = clientList.indexOf(s);
+							if(clientIndex != -1) {
+								ReadyList.add(clientThreadList.get(clientIndex));
+								if(ReadyList.size() == 4) {
+									startGame();
+								}
+							}
+							else {
+								messages.appendText("clientIndex was wrong");
 							}
 						}
 						
@@ -419,7 +444,7 @@ public class ServerFX extends Application{
 								this.out.writeObject(name + " has joined the server!");
 							}
 							clientList.add(newName);
-							conn.send(newName + " has joined the server!");
+							conn.sendAll(newName + " has joined the server!");
 						}
 						
 					}	
@@ -432,72 +457,6 @@ public class ServerFX extends Application{
 			
 		}
 		
-		
-		
-		/**
-		 * This function takes the strings of the two players choices and prints the winner and returns a string:
-		 * @param a String of player1
-		 * @param b	String of player2
-		 * a and be are in {Rock, Paper, Scissors, Lizard, Spock}
-		 * @return
-		 * possible returns
-		 * 0 for tie
-		 * 1 if player1 won
-		 * 2 if player2 won
-		 */
-		private int getWinner(String a, String b) throws Exception {
-
-			if(a.equals(b)) {
-				return 0;
-			}
-			
-			else if(a.equals("Rock")) {
-				if(b.equals("Lizard") || b.equals("Scissors")) {
-					return 1;
-				}
-				else if(b.equals("Spock") || b.equals("Paper")) {
-					return 2;
-				}
-			}
-			
-			else if(a.equals("Paper")) {
-				if(b.equals("Rock") || b.equals("Spock")) {
-					return 1;
-				}
-				else if(b.equals("Lizard") || b.equals("Scissors")) {
-					return 2;
-				}
-			}
-			
-			else if(a.equals("Scissors")) {
-				if(b.equals("Paper") || b.equals("Lizard")) {
-					return 1;
-				}
-				else if(b.equals("Spock") || b.equals("Rock")) {
-					return 2;
-				}
-			}
-			
-			else if(a.equals("Lizard")) {
-				if(b.equals("Paper") || b.equals("Spock")) {
-					return 1;
-				}
-				else if(b.equals("Scissors") || b.equals("Rock")) {
-					return 2;
-				}
-			}
-			
-			else if(a.equals("Spock")) {
-				if(b.equals("Rock") || b.equals("Scissors")) {
-					return 1;
-				}
-				else if(b.equals("Paper") || b.equals("Lizard")) {
-					return 2;
-				}
-			}
-			
-			return 0;
-		}
 	}
 	
 	

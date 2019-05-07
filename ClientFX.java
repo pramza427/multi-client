@@ -1,9 +1,9 @@
 /**
- * Piotr Ramza
+  * Piotr Ramza
  * pramza2
  * 663328597
  * 
- * CS 342 Project 3
+ * CS 342 Project 5
  */
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -41,23 +41,28 @@ import javafx.stage.Stage;
 public class ClientFX extends Application{
 	
 	Label welcome, money, sign, pot;
-	Button setIPandPort, quit, hit, pass, bet, enterName, play;
+	Button setIPandPort, quit, hit, pass, bet, enterName, play, fold, draw;
 	TextField betAmount, potAmount, moneyAmount;
 	Stage myStage;
 	Scene nameScene, playScene;
 	private TextArea nameMessages = new TextArea();
 	private TextArea playMessages = new TextArea();
-	boolean stop;
+	boolean stop, first1, first2, first3;
 	String playerName = "";
 	private final ObservableList<String> opponentList = FXCollections.observableArrayList();
 	ListView<String> opponentListView = new ListView<String>();
 	private Integer score = 0;
 	Label scoreCounter = new Label(score.toString());
 	
-	Deck deck = new Deck();
+	Card op1Card, op2Card, op3Card;
 	
 	ArrayList<Card> playerCards = new ArrayList<Card>();
 	ArrayList<String> opponents = new ArrayList<String>();
+	
+	HBox cardImages = new HBox();
+	HBox opponentCards1;
+	HBox opponentCards2;
+	HBox opponentCards3;
 	
 	private Client conn;
 	
@@ -82,11 +87,21 @@ public class ClientFX extends Application{
 		
 		primaryStage.setTitle("BlackJack!");
 		
-		deck.shuffle();
+		first1 = true;
+		first2 = true;
+		first3 = true;
+		
+		cardImages.setAlignment(Pos.CENTER);
+		
 		hit = new Button("Hit");
 		hit.setPrefSize(50, 30);
 		pass = new Button("Pass");
 		pass.setPrefSize(50, 30);
+		draw = new Button("Draw");
+		draw.setPrefSize(50, 30);
+		
+		fold = new Button("Fold");
+		fold.setPrefSize(50, 30);
 		bet = new Button("Bet");
 		bet.setPrefSize(50, 30);
 		sign = new Label("$");
@@ -120,7 +135,7 @@ public class ClientFX extends Application{
 		nameScene = new Scene(namePane, 600, 400);
 		playScene = new Scene(playPane, 1000, 1000);
 		
-		primaryStage.setScene(playScene);
+		primaryStage.setScene(nameScene);
 		primaryStage.show();	
 		
 	}
@@ -196,7 +211,7 @@ public class ClientFX extends Application{
 			public void handle(ActionEvent event){
 				try {
 					playMessages.appendText("You Are: " + playerName + "!!!\n");
-					//pStage.setScene(playScene);
+					pStage.setScene(playScene);
 					conn.send("ReadyToPlay: " + playerName);
 				
 				} catch (Exception e) {
@@ -255,24 +270,15 @@ public class ClientFX extends Application{
 		//Finish Items for the center of the pane
 		
 		//Set player UI
-		playerCards.add(deck.drawCard());
-		playerCards.add(deck.drawCard());
-		
-		HBox cardImages = new HBox(8);
-		for(Card c: playerCards) {
-			cardImages.getChildren().add(c.getPic());
-		}
-		cardImages.setAlignment(Pos.CENTER);
-		
 		
 		HBox moneyBox = new HBox(8, money, moneyAmount);
 		money.setFont(Font.font(30));
 		moneyBox.setAlignment(Pos.CENTER);
-		HBox inputLeft = new HBox(8, hit, pass);
-		HBox inputRight = new HBox(8, bet, sign, betAmount);
+		HBox inputLeft = new HBox(8, hit, pass, draw);
+		HBox inputRight = new HBox(8, fold, bet, sign, betAmount);
 		HBox walkAway = new HBox(quit);
 		walkAway.setAlignment(Pos.CENTER);
-		HBox inputs = new HBox(30, inputLeft, inputRight);
+		HBox inputs = new HBox(40, inputLeft, inputRight);
 		inputs.setAlignment(Pos.CENTER);
 		Label you = new Label("You:");
 		you.setFont(Font.font(20));
@@ -282,58 +288,77 @@ public class ClientFX extends Application{
 		
 		//Set opponent UI
 		
-		Image pic = new Image("back.png");
-		ImageView iv = new ImageView(pic);
-		iv.setFitHeight(200);
-		iv.setFitWidth(100);
-		iv.setPreserveRatio(true);
-		
-		ImageView back1 = new ImageView(pic);
-		back1.setFitHeight(200);
-		back1.setFitWidth(100);
-		back1.setPreserveRatio(true);
-		
-		ImageView back2 = new ImageView(pic);
-		back2.setFitHeight(200);
-		back2.setFitWidth(100);
-		back2.setPreserveRatio(true);
-		
-		HBox opponentCards1 = new HBox(10, back1);
+		opponentCards1 = new HBox(2);
 		opponentCards1.setAlignment(Pos.CENTER);
 		
 		pane1.setRight(opponentCards1);
 		
-		HBox opponentCards2 = new HBox(10, back2);
+		opponentCards2 = new HBox(2);
 		opponentCards2.setAlignment(Pos.CENTER);
 		
 		pane1.setLeft(opponentCards2);
 		
-		HBox opponentCards3 = new HBox(10, iv);
+		opponentCards3 = new HBox(2);
 		opponentCards3.setAlignment(Pos.CENTER);
 		
 		pane1.setTop(opponentCards3);
 		
 		EventHandler<ActionEvent> clickHit = new EventHandler<ActionEvent>(){
 			public void handle(ActionEvent event){
-				Card c = deck.drawCard();
-				playerCards.add(c);
-				cardImages.getChildren().add(c.getPic());
-				playMessages.appendText("You Hit!\n");
-				int s = 0;
-				for(Card c1 : playerCards) {
-					s += c1.getScore();
-				}
-				if(s > 21) {
-					playMessages.appendText("You bust at " + s + "\n");
-					hit.setDisable(true);
-					pass.setDisable(true);
-					bet.setDisable(true);
+				playMessages.appendText("You chose to hit!\n");
+				try {
+					
+					conn.send(playerName + " chose to hit\n");
+					
+				} catch (Exception e) {
+					playMessages.appendText("Could not hit\n");
+					System.out.println(e.getMessage());
 				}
 			}
 		};
 		EventHandler<ActionEvent> clickPass = new EventHandler<ActionEvent>(){
 			public void handle(ActionEvent event){
+				
 				playMessages.appendText("You Passed!\n");
+				
+				try {	
+					conn.send(playerName + " chose to pass\n");
+					disableAll();
+				} catch (Exception e) {
+					playMessages.appendText("Could not pass\n");
+					System.out.println(e.getMessage());
+				}
+			}
+		};
+		EventHandler<ActionEvent> clickDraw = new EventHandler<ActionEvent>(){
+			public void handle(ActionEvent event){
+				
+				playMessages.appendText("You drew your first two cards!\n");
+				
+				try {	
+					conn.send(playerName + " chose to hit\n");
+					conn.send(playerName + " chose to hit\n");
+					
+					draw.setDisable(true);
+					
+					enableAll();
+				} catch (Exception e) {
+					playMessages.appendText("Could not draw your first two cards\n");
+					System.out.println(e.getMessage());
+				}
+			}
+		};
+		EventHandler<ActionEvent> clickFold = new EventHandler<ActionEvent>(){
+			public void handle(ActionEvent event){
+				
+				playMessages.appendText("You chose to fold!\n");
+				
+				try {
+					conn.send(playerName + " chose to fold\n");
+				} catch (Exception e) {
+					playMessages.appendText("Could not fold\n");
+					System.out.println(e.getMessage());
+				}
 			}
 		};
 		EventHandler<ActionEvent> clickBet = new EventHandler<ActionEvent>(){
@@ -366,19 +391,32 @@ public class ClientFX extends Application{
 		
 		hit.setOnAction(clickHit);
 		pass.setOnAction(clickPass);
+		fold.setOnAction(clickFold);
 		bet.setOnAction(clickBet);
 		quit.setOnAction(clickQuit);
+		draw.setOnAction(clickDraw);
 		
-		
+		disableAll();
 		
 		pane1.setBottom(playerUI);
 		
 		return pane1;
 	}
 	
-	//disables all the buttons except the set IP and Port
+	//disables all the buttons On the UI
 	private void disableAll() {
-		
+		hit.setDisable(true);
+		pass.setDisable(true);
+		fold.setDisable(true);
+		bet.setDisable(true);
+		draw.setDisable(true);
+	}
+	//enables all the buttons on the UI
+	private void enableAll() {
+		hit.setDisable(false);
+		pass.setDisable(false);
+		fold.setDisable(false);
+		bet.setDisable(false);
 	}
 	
 	
@@ -451,17 +489,8 @@ public class ClientFX extends Application{
 							playMessages.appendText("Server is closing.\n");
 							this.socket.close();
 							break;
-							
 						}
-						else if(data.toString().contains("started")) {
-							
-						}
-						else if(data.toString().contains("closing") || data.toString().contains("Tie!")) {
-							
-						}
-						else if(data.toString().contains("You")) {
-							
-						}
+						
 						//When the server gives you the player list
 						// "Players: name1 name2 name3 name4"
 						else if(data.toString().contains("Players: ")) {
@@ -481,12 +510,9 @@ public class ClientFX extends Application{
 							opponents.add(name4);
 							opponents.remove(playerName);
 							
-							playMessages.appendText("You are playing against: ");
-							for(String s : opponents) {
-								playMessages.appendText(s + ", ");
-							}
-							playMessages.appendText("\n");
-							
+							//enableAll();
+							draw.setDisable(false);
+							callback.accept(data);
 						}
 						
 						//when the server send "NAME has joined the server!"
@@ -495,6 +521,8 @@ public class ClientFX extends Application{
 							String n = data.toString().substring(0, firstSpace);
 							opponentList.add(n);
 							opponentListView.refresh();
+							opponents.add(n);
+							callback.accept(data);
 						}
 						//when a player disconnects, remove them from the opponent list
 						else if(data.toString().contains("Has Disconnected!")) {
@@ -502,21 +530,101 @@ public class ClientFX extends Application{
 							String n = data.toString().substring(0, firstSpace);
 							opponentList.remove(n);
 							opponentListView.refresh();
+							callback.accept(data);
 						}
-
-						//If another user has challenged you, display their name in the textbox and enable
-						// accept and reject buttons
-
-						else if(data.toString().contains(" has challenged ")) {
-							int firstSpace = data.toString().indexOf("challenged");
-							String n = data.toString().substring(firstSpace+11);
-
-							if (n.equals(playerName)){
-								int thirdSpace = data.toString().indexOf(" ", 1);
-								String k = data.toString().substring(0, thirdSpace);
+						
+						////////////////////////////////////////////////////////
+						else if(data.toString().contains(" has drawn")) {
+							int substringOne = data.toString().indexOf(" ", 1);
+					    	int substringTwo = data.toString().indexOf("drawn");
+					    	int substringThree = data.toString().indexOf("of");
+					    	
+					    	String name = data.toString().substring(0, substringOne);
+					    	String suit = data.toString().substring(substringTwo + 6, substringThree - 1);
+					    	String numString = data.toString().substring(substringThree + 3);
+					    	int number = Integer.parseInt(numString);
+					    	
+							Card c = new Card(number, suit);
+							//if its an opponent that drew a card, get the index from the opponent list
+							int opIndex = opponents.indexOf(name);
+							
+							if(name.equals(playerName)) {
+								playerCards.add(c);
+								score += c.getScore();
+								if(score > 21) {
+									playMessages.appendText("you bust at " + score);
+									bet.setDisable(true);
+									hit.setDisable(true);
+									fold.setDisable(true);
+									pass.setDisable(true);
+								}
 								
+								Platform.runLater(()-> {
+									cardImages.getChildren().add(c.getPic());
+								});								
+							}
+							
+							else if(opIndex == 0) {
+								if(first1) {
+									first1 = false;
+									Image back = new Image("PNG/back.png");
+									ImageView backIV = new ImageView(back);
+									backIV.setFitHeight(200);
+									backIV.setFitWidth(100);
+									backIV.setPreserveRatio(true);
+									op1Card = c;
+									Platform.runLater(()-> {
+										opponentCards1.getChildren().add(backIV);
+									});
+								}
+								else {
+									Platform.runLater(()-> {
+										opponentCards1.getChildren().add(c.getPic());
+									});
+								}
+							}
+							else if(opIndex == 1) {
+								if(first2) {
+									first2 = false;
+									Image back = new Image("PNG/back.png");
+									ImageView backIV = new ImageView(back);
+									backIV.setFitHeight(200);
+									backIV.setFitWidth(100);
+									backIV.setPreserveRatio(true);
+									op2Card = c;
+									Platform.runLater(()-> {
+										opponentCards2.getChildren().add(backIV);
+									});
+								}
+								else {
+									Platform.runLater(()-> {
+										opponentCards2.getChildren().add(c.getPic());
+									});
+								}
+							}
+							else if(opIndex == 2) {
+								if(first3) {
+									first3 = false;
+									Image back = new Image("PNG/back.png");
+									ImageView backIV = new ImageView(back);
+									backIV.setFitHeight(200);
+									backIV.setFitWidth(100);
+									backIV.setPreserveRatio(true);
+									op3Card = c;
+									Platform.runLater(()-> {
+										opponentCards3.getChildren().add(backIV);
+									});
+								}
+								else {
+									Platform.runLater(()-> {
+										opponentCards3.getChildren().add(c.getPic());
+									});
+								}
 							}
 						}
+						
+						///////////////////////////////////////////////////////
+						
                            //###################################################
                           //ALWAYS GOES TO CATCH, NEEDS MODIFICATION
 						else if(data.toString().contains(" has accepted")) {
@@ -527,13 +635,15 @@ public class ClientFX extends Application{
 								String k = data.toString().substring(0, thirdSpace);
 									send(playerName + " ready for " + k);
 							}
+							callback.accept(data);
 						}
 						//when the server sends that you won, increase score and display it
 						else if(data.toString().contains("You Won!")) {
 							score++;
 							scoreCounter.textProperty().set(score.toString());
+							callback.accept(data);
 						}
-						callback.accept(data);
+						
 					}
 					
 				}
@@ -542,6 +652,7 @@ public class ClientFX extends Application{
 					playMessages.appendText("Could not connect to server.\nPlease close and try again.\n");
 					enterName.setDisable(true);
 					play.setDisable(true);
+					System.out.println(e.getMessage());
 				}
 			}
 		}

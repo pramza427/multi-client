@@ -1,60 +1,60 @@
+/**
+ * Piotr Ramza
+ * pramza2
+ * 663328597
+ * 
+ * CS 342 Project 2
+ * 
+ */
 
 import java.util.ArrayList;
-import java.util.Collections;
+
+import javafx.scene.image.Image;
 
 public class Deck {
-
-    public final int numberOfCards = 52;    //Standard 52 card deck.
-
-    public ArrayList<Card> deck = new ArrayList<Card>(numberOfCards);
-
-    public Deck(){
-
-        int i = 0;
-
-        for(int suit = 0; suit <= 3; suit++){
-            for(int number = 0; number <= 12; number++){
-                deck.add(new Card(suit, number));
-                i++;
-            }
-        }
-    }
-    
-    public void shuffleDeck() {
-    	Collections.shuffle(this.deck);
-    }
-    
-    public ArrayList<Card> dealFirstTwoCards(){
-
-        Card tempCard;
-        ArrayList<Card> tempArray = new ArrayList<Card>(2);
-        ArrayList<Card> deckTemp = this.deck;
-
-
-        for(int i = 0; i < 2; i++){
-            tempCard = deckTemp.get(0);
-            tempArray.add(tempCard);	//Place the topmost card on a new array.
-            deckTemp.remove(0);			//Remove the card that was taken from the top of the deck
-        }
-
-        updateDealerDeck(deckTemp);		//Update the deck after cards are removed 
-        return tempArray;				//Return the 2 cards and deal it to the players
-    }
-    
-    public Card dealOneCard() {
-    	
-    	Card tempCard;
-    	ArrayList<Card> deckTemp = this.deck;
-    	
-    	tempCard = deckTemp.get(0);
-    	deckTemp.remove(0);
-    	
-    	updateDealerDeck(deckTemp);
-    	
-    	return tempCard;
-    }
-    
-    public void updateDealerDeck(ArrayList<Card> c){
-        this.deck = c;
-    }
+	ArrayList<Card> cards = new ArrayList<Card>();
+	
+	public Deck() {
+		String[] suits = {"C", "D", "H", "S"};
+		for(int i = 0; i < 4; i++) {
+			for(int j = 2; j <= 14; j++) {
+				String ts = "PNG/" + suits[i] + String.valueOf(j) + ".png";
+				Image pic = new Image(ts);
+				Card temp = new Card(j, suits[i], pic);
+				cards.add(temp);
+			}
+		}
+	}
+	
+	//grabs a random card and places it in a random spot 100 times
+	public void shuffle() {
+		for(int i = 0; i < 100; i++) {
+			int rand = (int)(Math.random() * 52);
+			int rand2 = (int)(Math.random() * 52);
+			
+			Card temp = cards.remove(rand);
+			cards.add(rand2, temp);
+		}
+	}
+	
+	public Card drawCard() {
+		if(cards.isEmpty()) {
+			return null;
+		}
+		else {
+			return cards.remove(0);
+		}
+	}
+	
+	public void reset() {
+		cards.clear();
+		String[] suits = {"C", "D", "H", "S"};
+		for(int i = 0; i < 4; i++) {
+			for(int j = 2; j <= 14; j++) {
+				Image pic = new Image( suits[i] + String.valueOf(j) + ".png");
+				Card temp = new Card(j, suits[i], pic);
+				cards.add(temp);
+			}
+		}
+	}
 }
