@@ -1,10 +1,3 @@
-/**
- * Piotr Ramza
- * pramza2
- * 663328597
- * 
- * CS 342 Project 5
- */
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -39,7 +32,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class ServerFX extends Application{
-	
+
 	Label welcome;
 	Button setPort, quit, on, off;
 	Stage myStage;
@@ -58,17 +51,18 @@ public class ServerFX extends Application{
 	Server.toClientThread tct4 = null;
 	private Server conn = null;
 	private final ObservableList<String> clientList = FXCollections.observableArrayList();
-	
+
 	ArrayList<Server.toClientThread> clientThreadList= new ArrayList<Server.toClientThread>();
-	
+
 	ArrayList<Server.toClientThread> ReadyList= new ArrayList<Server.toClientThread>();
-	
+	ArrayList<String> ReadyPlay = new ArrayList<String>();
+
 	Deck deck = new Deck();
-	
+
 	public static void main(String[] args) throws Exception {
 		launch(args);
 	}
-	
+
 	@Override
 	public void stop(){
 		stop = true;
@@ -78,16 +72,16 @@ public class ServerFX extends Application{
 		tct4 = null;
 		try {
 			conn.server.serverSocket.close();
-			
+
 		} catch (Exception e) {
 			System.out.println("serverSocket.close in stop() did not run!");
 		}
-		
-		
+
+
 	}
-	
+
 	public void start(Stage primaryStage) throws Exception {
-		
+
 		//set player scores to 0
 		score1 = 0;
 		score2 = 0;
@@ -97,36 +91,36 @@ public class ServerFX extends Application{
 		//set round (which has a max of 2) to 1
 		round = 1;
 		stop = false;
-		
+
 		deck.shuffle();
-		
+
 		primaryStage.setTitle("Server for Rock Paper Scissors Lizard Spock!");
-		
+
 		quit = new Button("Quit");
 		on = new Button("On");
 		off = new Button("Off");
 		setPort = new Button("Set Port");
-		
+
 		myStage = primaryStage;
-		
+
 		BorderPane pane1 = serverScreen();
 
 		scene = new Scene(pane1, 850, 500);
-		
+
 		primaryStage.setScene(scene);
-		primaryStage.show();	
-		
+		primaryStage.show();
+
 	}
-	
-	
-	
-	
+
+
+
+
 	private BorderPane serverScreen(){
-		
+
 		//Initialize the Border pane that will be returned
 		BorderPane pane1 = new BorderPane();
 		pane1.setPadding(new Insets(10));
-		
+
 		//Label that greats the player to the game
 		Label welcome = new Label("This is the Server for Rock Paper Scissors Lizard Spock!\n");
 		Label space = new Label(" ");
@@ -134,7 +128,7 @@ public class ServerFX extends Application{
 		welcomeBox.setAlignment(Pos.TOP_CENTER);
 		pane1.setTop(welcomeBox);
 
-		
+
 		//Set the actions for what happens when the buttons are clicked
 		EventHandler<ActionEvent> clickOn = new EventHandler<ActionEvent>(){
 			public void handle(ActionEvent event){
@@ -153,7 +147,7 @@ public class ServerFX extends Application{
 		};
 		//###############################################################
 		//############ PROBLEM: server off button does not work
-		//############          always goes to catch 
+		//############          always goes to catch
 		//############     clicking the X at the top right works fine tho
 		//###############################################################
 		EventHandler<ActionEvent> clickOff = new EventHandler<ActionEvent>(){
@@ -182,20 +176,20 @@ public class ServerFX extends Application{
 				}
 			}
 		};
-		
-			
+
+
 		//set buttons to do things!
 		on.setOnAction(clickOn);
 		off.setOnAction(clickOff);
 		setPort.setOnAction(clickSetPort);
-		
+
 		//prompt to ask client for IP and Port
 		Label ipPortPrompt = new Label("Please enter the Port:");
 		serverPortIn = new TextField("5555");
 		serverPortIn.setPrefWidth(60.0);
 		HBox serverInput = new HBox(10, ipPortPrompt, serverPortIn, setPort);
 		serverInput.setAlignment(Pos.CENTER);
-		
+
 		//Port and on/off buttons to the center of the pane
 		Label onOrOff = new Label("Turn Server: ");
 		HBox onOffBox= new HBox(8, onOrOff, on, off);
@@ -204,7 +198,7 @@ public class ServerFX extends Application{
 		messages.setPrefHeight(365);
 		VBox centerBox = new VBox(8, serverInput, onOffBox, messages);
 		pane1.setCenter(centerBox);
-		
+
 		ListView<String> clientListView = new ListView<String>();
 		clientListView.setItems(clientList);
 		clientListView.setPrefWidth(350);
@@ -212,12 +206,12 @@ public class ServerFX extends Application{
 		VBox listBox = new VBox(8, listLabel, clientListView);
 		listBox.setAlignment(Pos.CENTER);
 		pane1.setRight(listBox);
-		 
+
 		off.setDisable(true);
-		
+
 		return pane1;
 	}
-	
+
 	private Server createServer(Integer tempPort) {
 		try {
 			return new Server(tempPort, data-> {
@@ -230,7 +224,7 @@ public class ServerFX extends Application{
 		}
 		return conn;
 	}
-	
+
 	public ObservableList<String> getClientList(){
 		return clientList;
 	}
@@ -251,7 +245,7 @@ public class ServerFX extends Application{
 			this.port = port;
 			server = new ServerThread();
 			server.start();
-			
+
 		}
 
 		protected boolean isServer() {
@@ -265,7 +259,7 @@ public class ServerFX extends Application{
 		protected int getPort() {
 			return port;
 		}
-		
+
 		public void closeConn() throws Exception{
 			if(tct.connection != null) {
 				tct.connection.close();
@@ -273,9 +267,9 @@ public class ServerFX extends Application{
 			if(tct2.connection != null) {
 				tct2.connection.close();
 			}
-			
+
 		}
-		
+
 		public void sendAll(Serializable data) throws Exception{
 			//go through the arrayList of connections and send the data to each
 			for(toClientThread tct: clientThreadList) {
@@ -289,43 +283,43 @@ public class ServerFX extends Application{
 			tct3.out.writeObject(data);
 			tct4.out.writeObject(data);
 		}
-		
+
 		public void startGame() throws Exception {
-			
-			
+
+
 			tct = ReadyList.get(0);
 			tct2 = ReadyList.get(1);
 			tct3 = ReadyList.get(2);
 			tct4 = ReadyList.get(3);
-			
+
 			String s = "Players: " + clientList.get(0) + " " + clientList.get(1) + " "
-					+ clientList.get(2) + " " + clientList.get(3);		
+					+ clientList.get(2) + " " + clientList.get(3);
 			try {
 				sendAll(s);
 			} catch (Exception e) {
 				messages.appendText("Cound not start game.");
 			}
 		}
-		
-		
+
+
 		public void dealInitialCards(String n){
-			
+
 			Card c1 = deck.drawCard();
 			Card c2 = deck.drawCard();
-			
+
 			String s = "Dealing: " + n + " " + c1.getSuit() + " " + c1.getNumber() + " " + c2.getSuit() + " " + c2.getNumber();
-			
+
 			try {
 				sendAll(s);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				messages.appendText("Cound deal two cards.");
 			}
-			
+
 		}
-	
-		
-		
+
+
+
 		class ServerThread extends Thread{
 			ServerSocket serverSocket = null;
 			public void run() {
@@ -342,7 +336,7 @@ public class ServerFX extends Application{
 						clientThreadList.add(t);
 						t.start();
 						messages.appendText("Client Connected: " + s + "\n");
-						
+
 					}
 					catch(Exception e) {
 						callback.accept("Connection Closed\n");
@@ -353,20 +347,20 @@ public class ServerFX extends Application{
 				}
 			}
 		}
-		
+
 		// Embedded Thread class
 		class toClientThread extends Thread{
-			
+
 			Socket connection;
 			ObjectInputStream in;
 			ObjectOutputStream out;
 			int score;
-			
+
 			toClientThread(Socket s){
 				this.connection = s;
 				score = 0;
 			}
-			
+
 			public void run() {
 				try{
 					ObjectOutputStream out = new ObjectOutputStream(connection.getOutputStream());
@@ -374,52 +368,95 @@ public class ServerFX extends Application{
 					s = connection;
 					this.out = out;
 					this.in = in;
-					
+
 					while(!stop) {
 						Serializable data = (Serializable) in.readObject();
 						String stringData = (String) data;
-						
+
 						//What to do when a Client chooses to quit
 						if(stringData.contains("Quit")) {
 							messages.appendText("Connection " + connection + " is closing.\n");
 							int firstSpace = stringData.indexOf(" ", 1);
 							String n = stringData.substring(0, firstSpace);
+							int tctSpot = clientList.indexOf(n); //Find the index of the client quitting
 							clientList.remove(n);
 							clientThreadList.remove(this);
 							this.connection.close();
 							this.in.close();
 							this.out.close();
+
+							//Because I use the person's spot in the array list to find their connection
+							//Must shift everything like the array list would since that's how it is found
+
+							switch (tctSpot){
+								case 0:
+									tct.connection = tct2.connection;
+									tct2.connection = tct3.connection;
+									tct3.connection = tct4.connection;
+									tct4.connection = null;
+									break;
+								case 1:
+									tct2.connection = tct3.connection;
+									tct3.connection = tct4.connection;
+									tct4.connection = null;
+									break;
+								case 2:
+									tct3.connection = tct4.connection;
+									tct4.connection = null;
+									break;
+								case 3:
+									tct4.connection = null;
+									break;
+								default:
+									break;
+							}
+
 							conn.send(n +" Has Disconnected!");
 							break;
 						}
-						
+
 						///////////////////////////////////////////////////////////////////////
 						if(stringData.contains("hit")) {
 							Card c = deck.drawCard();
-							
+
 							int firstSpace = stringData.indexOf(" ", 1);
-							
+
 							String n = stringData.substring(0, firstSpace);
 							messages.appendText(n + " chose to hit! They drew: " + c.getSuit() + c.getNumber() + "\n");
-							
+
 							conn.sendAll(n + " has drawn " + c.getSuit() + " of "  + c.getNumber());
-							//playerName has drawn S of N 
+							//playerName has drawn S of N
 						}
-						
+
 						if(stringData.contains("drew their first two cards")) {
-							
+
 							int firstSpace = stringData.indexOf(" ", 1);
 							String n = stringData.substring(0, firstSpace);
 							dealInitialCards(n);
+
+						}
+
+						if(stringData.contains("has placed a bet") || stringData.contains("chose to fold")) {
+							
+							int firstSpace = stringData.indexOf(" ", 1);
+							
+							String n = stringData.substring(0, firstSpace);
+							
+							int clientIndex = clientList.indexOf(n);
+							if(clientIndex != -1) {
+								ReadyPlay.add(n);
+								if(ReadyPlay.size() == 4) {
+									conn.sendAll("Starting game!");
+								}
+							}
+							else {
+								messages.appendText("clientIndex was wrong");
+							}
 							
 						}
-						
-						if(stringData.contains("playing against")) {
-						}
 						//////////////////////////////////////////////////////////////////////
-						
+
 						if(stringData.contains("ReadyToPlay:")) {
-							boolean startedGame = false;
 							String s = stringData.substring(13);
 							messages.appendText(s + "\n");
 							int clientIndex = clientList.indexOf(s);
@@ -434,6 +471,8 @@ public class ServerFX extends Application{
 							}
 						}
 						
+						
+
 						//New player has Joined the server
 						//#########################################################
 						// This is where you would check if the player name already exists
@@ -446,18 +485,18 @@ public class ServerFX extends Application{
 							clientList.add(newName);
 							conn.sendAll(newName + " has joined the server!");
 						}
-						
-					}	
+
+					}
 				}
 				catch (Exception e) {
 					callback.accept("Connection Closed\n");
-				}	
-				
+				}
+
 			}
-			
+
 		}
-		
+
 	}
-	
-	
+
+
 }
