@@ -433,6 +433,29 @@ public class ClientFX extends Application{
 		fold.setDisable(false);
 		bet.setDisable(false);
 	}
+	
+	public int calculateHand(ArrayList<Card> hand) {
+		
+		int score = 0;
+		int numAces = 0;
+		
+		for(Card c : hand) {
+			if(c.getNumber() == 14) {	
+				numAces += 1;
+				score += 11;
+			}
+			else {
+				score += c.getScore();
+			}
+		}
+		
+		while(score > 21 && numAces > 0) {
+			score -= 10;
+			numAces -= 1;
+		}
+		
+		return score;
+	}
 
 
 	private Client createClient(String tempIP, Integer tempPort) {
@@ -565,7 +588,9 @@ public class ClientFX extends Application{
 
 							if(name.equals(playerName)) {
 								playerCards.add(c);
-								score += c.getScore();
+								//score += c.getScore();
+								score = calculateHand(playerCards);
+								playMessages.appendText("Your hand value is " + score + "\n");
 								if(score > 21) {
 									playMessages.appendText("you bust at " + score);
 									bet.setDisable(true);
