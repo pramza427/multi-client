@@ -43,6 +43,7 @@ public class ClientFX extends Application{
 	boolean stop, first1, first2, first3;
 	String playerName = "";
 	boolean hasFold = false;
+	boolean hasBusted = false;
 	private final ObservableList<String> opponentList = FXCollections.observableArrayList();
 	ListView<String> opponentListView = new ListView<String>();
 	private Integer score = 0;
@@ -380,7 +381,7 @@ public class ClientFX extends Application{
 					moneyAmount.setText(moneyLeft.toString());
 					
 					try {
-						conn.send(playerName + " has placed a bet!\n");
+						conn.send(playerName + " has placed a bet of: " + inBet);
 						bet.setDisable(true);
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
@@ -593,10 +594,13 @@ public class ClientFX extends Application{
 								playMessages.appendText("Your hand value is " + score + "\n");
 								if(score > 21) {
 									playMessages.appendText("you bust at " + score);
+									conn.send(playerName + " busted at" + score);
 									bet.setDisable(true);
 									hit.setDisable(true);
 									fold.setDisable(true);
 									pass.setDisable(true);
+									
+									hasBusted = true;
 								}
 
 								Platform.runLater(()-> {
@@ -680,7 +684,30 @@ public class ClientFX extends Application{
 							*/
 							callback.accept(data);
 						}
-
+						
+						else if(data.toString().contains("Round is over")) {
+							if(hasBusted == false && hasFold == false) {
+								conn.send("Score " + score);
+							}
+							else {
+								hasBusted = false;
+								hasFold = false;
+							}
+							
+							callback.accept(data);
+						}
+						
+						else if(data.toString().contains("Score")) {
+							
+							int lastSpace = data.toString().indexOf(" ", 1);
+							String scoreString = data.toString().substring(lastSpace + 1);
+							int parsedScore = Integer.parseInt(scoreString);
+							
+							if(score == parsedScore) {
+								playMessages.appendText("You won!");
+							}
+						}
+						
 						///////////////////////////////////////////////////////
 
 						//###################################################
