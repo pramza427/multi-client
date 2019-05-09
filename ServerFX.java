@@ -6,6 +6,7 @@ import java.io.Serializable;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.function.Consumer;
@@ -43,6 +44,7 @@ public class ServerFX extends Application{
 	//move1 holds the String of whoever chose first
 	TextField serverPortIn;
 	int portNumber = 0;
+	int numPasses = 0;
 	boolean play1, play2, stop;
 	//The server connection for 4 people
 	Server.toClientThread tct = null;
@@ -56,6 +58,8 @@ public class ServerFX extends Application{
 
 	ArrayList<Server.toClientThread> ReadyList= new ArrayList<Server.toClientThread>();
 	ArrayList<String> ReadyPlay = new ArrayList<String>();
+	ArrayList<String> Finished = new ArrayList<String>();
+	ArrayList<Integer> playerScores = new ArrayList<Integer>();
 
 	Deck deck = new Deck();
 
@@ -302,24 +306,6 @@ public class ServerFX extends Application{
 		}
 
 
-		public void dealInitialCards(String n){
-
-			Card c1 = deck.drawCard();
-			Card c2 = deck.drawCard();
-
-			String s = "Dealing: " + n + " " + c1.getSuit() + " " + c1.getNumber() + " " + c2.getSuit() + " " + c2.getNumber();
-
-			try {
-				sendAll(s);
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				messages.appendText("Cound deal two cards.");
-			}
-
-		}
-
-
-
 		class ServerThread extends Thread{
 			ServerSocket serverSocket = null;
 			public void run() {
@@ -428,13 +414,6 @@ public class ServerFX extends Application{
 							//playerName has drawn S of N
 						}
 
-						if(stringData.contains("drew their first two cards")) {
-
-							int firstSpace = stringData.indexOf(" ", 1);
-							String n = stringData.substring(0, firstSpace);
-							dealInitialCards(n);
-
-						}
 
 						if(stringData.contains("has placed a bet") || stringData.contains("chose to fold")) {
 							
@@ -444,7 +423,14 @@ public class ServerFX extends Application{
 							
 							int clientIndex = clientList.indexOf(n);
 							if(clientIndex != -1) {
-								ReadyPlay.add(n);
+								if(stringData.contains("chose to fold")) {
+									//conn.sendAll("Testing");
+									ReadyPlay.add(n);
+									Finished.add(n);
+								}
+								else {
+									ReadyPlay.add(n);
+								}
 								if(ReadyPlay.size() == 4) {
 									conn.sendAll("Starting game!");
 								}
@@ -452,7 +438,45 @@ public class ServerFX extends Application{
 							else {
 								messages.appendText("clientIndex was wrong");
 							}
+						}
+						
+						if(stringData.contains("chose to pass") || stringData.contains("busted at")) {
+							if(stringData.contains("chose to pass")) {
+								numPasses++;
+							}
 							
+							int firstSpace = stringData.indexOf(" ", 1);
+							
+							String n = stringData.substring(0, firstSpace);
+							
+							int clientIndex = clientList.indexOf(n);
+							if(clientIndex != -1) {
+								Finished.add(n);
+								conn.sendAll("Testing");
+								if(Finished.size() == 4) {
+									conn.sendAll("Round is over!");
+								}
+							}
+							else {
+								messages.appendText("clientIndex was wrong");
+							}
+						}
+						
+						if(stringData.contains("Score")) {
+							
+							int lastSpace = stringData.indexOf(" ", 1);
+							String scoreString = stringData.substring(lastSpace + 1);
+							int score = Integer.parseInt(scoreString);
+							int returnScore;
+							
+							playerScores.add(score);
+							Collections.sort(playerScores);
+							
+							if(playerScores.size() == numPasses) {
+								returnScore = playerScores.get(playerScores.size() - 1);
+								
+								conn.sendAll("Score " + returnScore);
+							}
 						}
 						//////////////////////////////////////////////////////////////////////
 
